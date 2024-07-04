@@ -139,4 +139,10 @@ if __name__ == "__main__":
 ```
 Eğer bu dosya ana program olarak çalıştırılıyorsa, `main()` fonksiyonunu çalıştırır.
 
+
+
+
+
+## BULUNAN KORDİNATLARA TIKLAMA VE TOPLAMA İŞLEMLERİ SERVERDAN SERVERA DEĞİŞEBİLİR. YUKARIDAKİ KOD SADECE OYUNDA KUTUNUN KORDİNATLARINI DÖNER :) İYİ ÇALIŞMALAR :rocket:
+
 Bu şekilde, kod her bir görüntüyü alır, YOLO modelini kullanarak nesneleri tespit eder, koordinatlarını konsola yazdırır ve sonuçları görsel olarak gösterir.
