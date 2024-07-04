@@ -133,16 +133,5 @@ Eğer kullanıcı 'q' tuşuna basarsa, döngü kırılır ve program sonlanır.
 ```
 Tüm OpenCV pencerelerini kapatır.
 
-```python
-if __name__ == "__main__":
-    main()
-```
-Eğer bu dosya ana program olarak çalıştırılıyorsa, `main()` fonksiyonunu çalıştırır.
-
-
-
-
 
 ## BULUNAN KORDİNATLARA TIKLAMA VE TOPLAMA İŞLEMLERİ SERVERDAN SERVERA DEĞİŞEBİLİR. YUKARIDAKİ KOD SADECE OYUNDA KUTUNUN KORDİNATLARINI DÖNER :) İYİ ÇALIŞMALAR :rocket:
-
-Bu şekilde, kod her bir görüntüyü alır, YOLO modelini kullanarak nesneleri tespit eder, koordinatlarını konsola yazdırır ve sonuçları görsel olarak gösterir.
