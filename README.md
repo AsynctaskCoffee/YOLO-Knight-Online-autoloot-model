@@ -1,137 +1,175 @@
-## Kedikodu
+[![Videoyu İzle: Knight Online AutoLoot Demo](https://img.youtube.com/vi/KATgKl8bgaQ/hqdefault.jpg)](https://youtu.be/KATgKl8bgaQ?si=Yh4QmymAisHCRc9C)
 
-```python
-import cv2
-import numpy as np
-from PIL import ImageGrab
-from ultralytics import YOLO
+## YOLO Knight Online AutoLoot (Tkinter UI)
 
-# YOLO modelini 'best.pt' dosyasından yükle
-model = YOLO('best.pt')
+Bu projeyi sıfırdan, sade bir dille anlatalım.
 
-def get_center_half_window_image():
-    # Pencerenin ekran görüntüsünü al ve numpy array'ine dönüştür
-    bbox = (0, 0, 1920, 1080)  # Tüm ekranı yakalar
-    img = np.array(ImageGrab.grab(bbox=bbox))
-    return img
+Bu araç şunu yapar:
+1. Ekrandaki görüntüyü alır.
+2. Bu görüntüde modelin öğretilmiş olduğu nesneleri arar.
+3. Bulduğu nesnenin koordinatını çıkarır.
+4. Seçtiğin moda göre oraya sol/sağ tık atar.
 
-def main():
-    while True:
-        img = get_center_half_window_image()
-        if img is not None:
-            img_cv2 = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-            results = model(img_cv2, stream=True)
-            
-            for r in results:
-                if r.boxes:
-                    for box in r.boxes:
-                        x1, y1, x2, y2 = map(int, box.xyxy[0])
-                        print(f"Koordinatlar: x1={x1}, y1={y1}, x2={x2}, y2={y2}")
-                        cv2.rectangle(img_cv2, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            
-            # Görüntüyü göster
-            cv2.imshow("YOLO Detection", img_cv2)
-            
-            # 'q' tuşuna basıldığında döngüyü kır
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+Kısaca: **“Ekrana bak + hedefi bul + tıkla”**.
 
-    cv2.destroyAllWindows()
+---
 
-if __name__ == "__main__":
-    main()
+## YOLO nedir? (Uzun ve net anlatım)
+
+YOLO = **You Only Look Once**.
+
+Bu bir nesne tespit yaklaşımıdır. Yani sadece “resimde bir şey var mı?” demez; aynı zamanda **resimde nerede** olduğunu da söyler.
+
+Örnek:
+- Sınıflandırma modeli: “Bu fotoğrafta kedi var.”
+- YOLO gibi tespit modeli: “Bu fotoğrafta kedi var ve şu kutunun içinde (x1,y1,x2,y2).”
+
+Bu projede model (`best.pt`) ekrandan alınan görüntüde loot/hedef olarak eğitilmiş nesneleri yakalar.
+
+YOLO neden tercih edilir?
+- Hızlıdır (gerçek zamanlıya uygundur).
+- Tek geçişte (single-pass) tespit yapar.
+- Ekran akışında tekrar tekrar çalıştırması kolaydır.
+
+Bu repo’daki akışta YOLO’nun görevi şudur:
+- Görüntüde kutuları üretmek.
+- Her kutu için bir güven skoru vermek (`confidence`).
+- Eşik üstündeki kutulardan en mantıklısını seçmek (kodda en yüksek skorlu olan seçiliyor).
+
+---
+
+## Bu proje teknik olarak nasıl çalışıyor?
+
+`autoloot_ui.py` dosyası tek başına bütün sistemi yönetir.
+
+### 1) Arayüz (Tkinter)
+Arayüzden şunları ayarlarsın:
+- Model dosyası (`.pt`)
+- Confidence (tespit eşiği)
+- Tarama aralığı (kaç saniyede bir tarasın)
+- Ekran bölgesi (`x1, y1, x2, y2`)
+- Tıklama modu (`left`, `right`, `both`)
+- Offset (`X/Y`) ve ikinci tık gecikmesi
+- Önizleme penceresi açık/kapalı
+
+### 2) Ekran görüntüsü alma
+Kod belirlediğin ekran alanını alır (`ImageGrab`).
+
+### 3) YOLO ile tespit
+Alınan görüntü YOLO modeline verilir.
+- Kutu koordinatları çıkar.
+- Her kutunun confidence değeri alınır.
+- Eşik altı elenir.
+- En yüksek skorlu kutu seçilir.
+
+### 4) Tıklama
+Seçilen kutunun merkez noktası alınır.
+- `left`: sol tık
+- `right`: sağ tık
+- `both`: önce sol sonra (kısa gecikmeyle) sağ tık
+
+Offset varsa bu merkeze eklenir.
+
+### 5) Döngü
+Bu işlem, verdiğin tarama aralığına göre sürekli tekrar eder.
+
+---
+
+## Kodun kısa sade açıklaması (dosya içinde ne var?)
+
+- `DetectionConfig`: Bütün ayarları tek yerde tutan yapı.
+- `AutoLootApp`: Uygulamanın ana sınıfı.
+  - `_build_ui`: Ekrandaki buton/alanları oluşturur.
+  - `_sync_config_from_ui`: Girilen değerleri kontrol eder, hatalıysa kullanıcıya söyler.
+  - `_load_model`: YOLO modelini yükler.
+  - `_capture_region`: Ekran alanını görüntü olarak alır.
+  - `_find_best_box_center`: Kutular içinde en iyi adayı bulur.
+  - `_perform_click`: Seçilen noktaya tıklar.
+  - `_run_loop`: Tüm bu adımları thread içinde sürekli döndürür.
+
+Yani kod da sade olarak şu mantıkta:
+**Ayarları al → modeli yükle → ekranı tara → hedefi bul → tıkla → bekle → tekrar et.**
+
+---
+
+## Kurulum
+
+Python 3.10+ önerilir.
+
+```bash
+pip install ultralytics opencv-python pillow pyautogui numpy
 ```
 
-Şimdi bu kodun her satırını detaylı bir şekilde açıklayalım:
+> Not: `pyautogui` bazı sistemlerde güvenlik izni ister.
 
-```python
-import cv2
-import numpy as np
-from PIL import ImageGrab
-from ultralytics import YOLO
+---
+
+## Çalıştırma
+
+```bash
+python autoloot_ui.py
 ```
-Bu satırlar gerekli kütüphaneleri içe aktarıyor:
-- `cv2`: OpenCV kütüphanesi, görüntü işleme için kullanılır.
-- `numpy`: Numpy kütüphanesi, sayısal işlemler ve array manipülasyonları için kullanılır.
-- `ImageGrab`: PIL kütüphanesinden, ekran görüntüsü almak için kullanılır.
-- `YOLO`: YOLO (You Only Look Once) modelini içeren ultralytics kütüphanesi.
 
-```python
-# YOLO modelini 'best.pt' dosyasından yükle
-model = YOLO('best.pt')
-```
-Bu satır, YOLO modelini 'best.pt' dosyasından yükler.
+Açılan arayüzde adım adım:
+1. `best.pt` (veya başka `.pt`) seç.
+2. Confidence değerini ayarla (örn. 0.45–0.65 arası başlayabilirsin).
+3. Ekran bölgesini gir (mümkünse tüm ekran yerine sadece oyun alanı).
+4. Tıklama modunu seç.
+5. Gerekirse offset ver.
+6. `Başlat` de.
 
-```python
-def get_center_half_window_image():
-    # Pencerenin ekran görüntüsünü al ve numpy array'ine dönüştür
-    bbox = (0, 0, 1920, 1080)  # Tüm ekranı yakalar
-    img = np.array(ImageGrab.grab(bbox=bbox))
-    return img
-```
-Bu fonksiyon, ekranın belirtilen `bbox` (bounding box) alanından bir ekran görüntüsü alır ve bunu numpy array'ine dönüştürür. Burada `bbox` tüm ekranı kapsar (1920x1080 çözünürlük).
+---
 
-```python
-def main():
-```
-Ana fonksiyonun başlangıcı.
+## Ayarları nasıl düşünmelisin? (Pratik rehber)
 
-```python
-    while True:
-```
-Sonsuz bir döngü oluşturur. Bu döngü, görüntülerin sürekli olarak işlenmesini sağlar.
+### Confidence
+- Çok düşükse: yanlış hedeflere tıklayabilir.
+- Çok yüksekse: gerçek hedefleri kaçırabilir.
+- Genelde orta seviye başlayıp testle ayarlamak en doğrusu.
 
-```python
-        img = get_center_half_window_image()
-```
-Ekrandan bir görüntü alır.
+### Tarama Aralığı
+- Çok düşük (çok sık): daha hızlı tepki ama daha fazla sistem yükü.
+- Daha yüksek: daha az yük, daha yavaş tepki.
 
-```python
-        if img is not None:
-```
-Eğer bir görüntü alındıysa (boş değilse) işlemeye devam eder.
+### Bölge (x1,y1,x2,y2)
+- Ne kadar küçük ve doğru alan seçersen performans o kadar iyi olur.
+- Tüm ekran taramak en ağır seçenektir.
 
-```python
-            img_cv2 = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-```
-Görüntüyü RGB renk uzayından BGR renk uzayına dönüştürür. OpenCV, görüntüleri BGR formatında işler.
+### Offset
+- Model kutunun merkezini verir ama oyunda gerçek tıklanacak nokta merkezden biraz kayık olabilir.
+- Offset ile bu farkı düzeltirsin.
 
-```python
-            results = model(img_cv2, stream=True)
-```
-YOLO modelini kullanarak görüntüdeki nesneleri tespit eder ve sonuçları `results` değişkenine atar.
+---
 
-```python
-            for r in results:
-                if r.boxes:
-                    for box in r.boxes:
-                        x1, y1, x2, y2 = map(int, box.xyxy[0])
-                        print(f"Koordinatlar: x1={x1}, y1={y1}, x2={x2}, y2={y2}")
-                        cv2.rectangle(img_cv2, (x1, y1), (x2, y2), (0, 255, 0), 2)
-```
-Tespit edilen her bir nesne için:
-- Eğer nesne kutuları varsa (`r.boxes`):
-  - Her bir kutu için koordinatları `x1, y1, x2, y2` olarak alır.
-  - Koordinatları konsola yazdırır.
-  - Kutunun etrafına yeşil bir dikdörtgen çizer (`cv2.rectangle`).
+## Sık sorunlar
 
-```python
-            # Görüntüyü göster
-            cv2.imshow("YOLO Detection", img_cv2)
-```
-Güncellenmiş görüntüyü bir pencerede gösterir.
+### “Hiç tıklamıyor”
+- Model gerçekten doğru nesneleri görüyor mu? (Önizleme aç.)
+- Confidence çok yüksek olabilir.
+- Ekran bölgesi yanlış olabilir.
 
-```python
-            # 'q' tuşuna basıldığında döngüyü kır
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-```
-Eğer kullanıcı 'q' tuşuna basarsa, döngü kırılır ve program sonlanır.
+### “Yanlış yere tıklıyor”
+- Offset ayarla.
+- Model eğitim kalitesini gözden geçir.
+- `both` yerine tek modla test et.
 
-```python
-    cv2.destroyAllWindows()
-```
-Tüm OpenCV pencerelerini kapatır.
+### “Donuyor / yavaş”
+- Bölgeyi küçült.
+- Tarama aralığını artır.
+- Önizlemeyi kapat.
 
+---
 
-## BULUNAN KORDİNATLARA TIKLAMA VE TOPLAMA İŞLEMLERİ SERVERDAN SERVERA DEĞİŞEBİLİR. YUKARIDAKİ KOD SADECE OYUNDA KUTUNUN KORDİNATLARINI DÖNER :) İYİ ÇALIŞMALAR :rocket:
+## Güvenlik ve sorumluluk notu
+
+- Bu bir otomasyon aracıdır.
+- Oyuna/sunucuya göre kullanım kuralları farklıdır.
+- Hesap riski doğurabilecek ortamlarda kullanmadan önce kuralları kontrol et.
+- Sorumluluk kullanıcıdadır.
+
+---
+
+## Dosyalar
+
+- `autoloot_ui.py`: Uygulamanın tamamı (UI + YOLO inference + tıklama)
+- `best.pt`: Örnek model dosyası
